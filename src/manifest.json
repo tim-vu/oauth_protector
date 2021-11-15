@@ -1,0 +1,17 @@
+{
+  "name": "OAuth 2.0",
+  "description": "OAuth",
+  "version": "1.0",
+  "manifest_version": 2,
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": true
+  },
+  "content_scripts": [
+    {
+      "js": ["intercept.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "permissions": ["webRequest", "webRequestBlocking", "<all_urls>"]
+}
