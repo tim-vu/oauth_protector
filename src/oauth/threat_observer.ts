@@ -1,10 +1,10 @@
 import Exchange from "models/exchange";
 import Request from "models/request";
 import Response from "models/response";
-import { OAuthRequestType, OAuthResponseType } from "./oauth_message_type";
 
 export enum ThreatStatus {
   Unknown,
+  PotentiallyProtected,
   Protected,
   PotentiallyVulnerable,
   Vulnerable,
@@ -24,21 +24,15 @@ export default abstract class ThreatObserver {
     this._threatName = threatName;
   }
 
-  onRequest = (exchange: Exchange, request: Request) => {};
-
-  onOAuthRequest(
-    exchange: Exchange,
-    request: Request,
-    requestType: OAuthRequestType
-  ) {}
-
-  onOAuthResponse(
-    exchange: Exchange,
-    response: Response,
-    responseType: OAuthResponseType
-  ) {}
+  onRequest(exchange: Exchange, request: Request) {}
 
   onAuthorizationRequest(exchange: Exchange, request: Request) {}
+
+  onRedirectUriRequest(exchange: Exchange, request: Request) {}
+
+  onRedirectUriResponse(exchange: Exchange, response: Response) {}
+
+  onTokenRequest(exchange: Exchange, request: Request) {}
 
   onResponse(exchange: Exchange, response: Response) {}
 

@@ -11,7 +11,7 @@ export default class TokenHistoryLeakObserver extends ThreatObserver {
     super("Access Token Leak in Browser History");
   }
 
-  onAuthorizationResponse(exchange: Exchange, request: Request) {
+  onRedirectUriRequest(exchange: Exchange, request: Request) {
     this._authorizationResponseId = exchange.id;
   }
 

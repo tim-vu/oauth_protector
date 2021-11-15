@@ -10,7 +10,8 @@
   "content_scripts": [
     {
       "js": ["intercept.js"],
-      "run_at": "document_start"
+      "run_at": "document_start",
+      "matches": ["<all_urls>"]
     }
   ],
   "permissions": ["webRequest", "webRequestBlocking", "<all_urls>"]

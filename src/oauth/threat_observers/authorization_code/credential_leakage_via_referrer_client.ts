@@ -12,7 +12,6 @@ export default class CredentialLeakageViaReferrerClient extends ThreatObserver {
     "strict-origin",
     "strict-origin-when-cross-origin",
   ];
-  private _authorizationResponseId?: string;
 
   constructor() {
     super("Credential Leakage via Referrer Headers");
@@ -26,18 +25,14 @@ export default class CredentialLeakageViaReferrerClient extends ThreatObserver {
     this._threat_status = ThreatStatus.Protected;
   }
 
-  onAuthorizationResponse(exchange: Exchange, request: Request) {
-    this._authorizationResponseId = exchange.id;
-  }
+  onRedirectUriResponse(exchange: Exchange, response: Response) {
+    if (this._threat_status != ThreatStatus.Unknown) return;
 
-  onResponse(exchange: Exchange, response: Response) {
-    if (
-      this._threat_status != ThreatStatus.Unknown ||
-      exchange.id !== this._authorizationResponseId
-    )
+    if (Math.floor(response.statusCode / 100) == 3) {
+      //TODO: handle the case where the redirect includes the code/state parameter
+      this._threat_status = ThreatStatus.Protected;
       return;
-
-    if (Math.floor(response.statusCode / 100) == 3) return;
+    }
 
     const referrerPolicy = response.headers.get("Referrer-Policy");
 

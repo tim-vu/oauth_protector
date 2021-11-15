@@ -32,7 +32,7 @@ export default class CsrfObserver extends ThreatObserver {
     this._state = query.get(CsrfObserver.STATE_QUERY_PARAMETER);
   }
 
-  override onAuthorizationResponse(exchange: Exchange, request: Request) {
+  override onRedirectUriRequest(exchange: Exchange, request: Request) {
     if (this._threat_status !== ThreatStatus.Unknown) {
       return;
     }

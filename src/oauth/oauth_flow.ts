@@ -10,5 +10,5 @@ export default interface OAuthFlow {
   authorizationServer: string;
   type: FlowType;
   observers: ThreatObserver[];
-  authorizationResponseId?: string;
+  redirectUriRequestId?: string;
 }

@@ -8,7 +8,6 @@ import CodePhishingObserver from "./threat_observers/authorization_code/code_phi
 import CodeHistoryLeakObserver from "./threat_observers/authorization_code/code_history_leak_observer";
 import TokenHistoryLeakObserver from "./threat_observers/implicit/token_history_leak_observer";
 import CredentialLeakageViaReferrerClientObserver from "./threat_observers/authorization_code/credential_leakage_via_referrer_client";
-import { OAuthRequestType } from "./oauth_message_type";
 
 export class OAuthClientAssessor implements ExchangeListener {
   private _completedFlows: OAuthFlow[] = [];
@@ -40,11 +39,7 @@ export class OAuthClientAssessor implements ExchangeListener {
         this._activeFlow = flow;
 
         flow.observers.forEach((o) =>
-          o.onOAuthRequest(
-            exchange,
-            request,
-            OAuthRequestType.AuthorizationRequest
-          )
+          o.onAuthorizationRequest(exchange, request)
         );
 
         return;
@@ -64,40 +59,51 @@ export class OAuthClientAssessor implements ExchangeListener {
           return;
         }
 
-        console.log(`Authorization response detected. Client: ${flow.client}`);
+        console.log(`Redirect uri request detected. Client: ${flow.client}`);
         console.log(request);
 
         flow.observers.forEach((o) =>
-          o.onOAuthRequest(
-            exchange,
-            request,
-            OAuthRequestType.RedirectUriRequest
-          )
+          o.onRedirectUriRequest(exchange, request)
         );
 
         this._activeFlow = {
           ...this._activeFlow,
-          authorizationResponseId: exchange.id,
+          redirectUriRequestId: exchange.id,
         };
 
         return;
       }
+    }
 
-      if (OAuthClientAssessor._isAccessTokenRequest(request)) {
-        const flow =
-          this._activeFlow?.client == request.url.origin
-            ? this._activeFlow
-            : undefined;
+    if (OAuthClientAssessor._isAccessTokenRequest(request)) {
+      const flow =
+        this._activeFlow?.client == request.url.origin
+          ? this._activeFlow
+          : undefined;
 
-        if (!flow) {
-          console.log("Access token request without active flow?");
-          console.log("Initiator: " + request.url.origin);
-          console.log(request);
-          return;
-        }
+      if (!flow) {
+        console.log("Access token request without active flow?");
+        console.log("Initiator: " + request.url.origin);
+        console.log(request);
+        return;
+      }
 
+      flow.observers.forEach((o) => o.onTokenRequest(exchange, request));
+    }
+
+    [
+      ...this._completedFlows.flatMap((f) => f.observers),
+      ...(this._activeFlow?.observers || []),
+    ].forEach((o) => o.onRequest(exchange, request));
+  };
+
+  onResponse = (exchange: Exchange, response: Response) => {
+    if (exchange.type == "main_frame") {
+      const flow = this._activeFlow;
+
+      if (exchange.id === flow?.redirectUriRequestId) {
         flow.observers.forEach((o) =>
-          o.onOAuthRequest(exchange, request, OAuthRequestType.TokenRequest)
+          o.onRedirectUriResponse(exchange, response)
         );
       }
     }
@@ -105,7 +111,7 @@ export class OAuthClientAssessor implements ExchangeListener {
     [
       ...this._completedFlows.flatMap((f) => f.observers),
       ...(this._activeFlow?.observers || []),
-    ].forEach((o) => o.onRequest(exchange, request));
+    ].forEach((o) => o.onResponse(exchange, response));
   };
 
   private static _getRequestInitiator(exchange: Exchange, request: Request) {
@@ -220,7 +226,7 @@ export class OAuthClientAssessor implements ExchangeListener {
   };
 
   onExchangeCompleted(exchange: Exchange) {
-    if (exchange.id !== this._activeFlow?.authorizationResponseId) return;
+    if (exchange.id !== this._activeFlow?.redirectUriRequestId) return;
 
     this._activeFlow?.observers.forEach((o) => console.log(o.getAssesment()));
 
@@ -228,11 +234,4 @@ export class OAuthClientAssessor implements ExchangeListener {
     this._completedFlows.push(this._activeFlow);
     this._activeFlow = null;
   }
-
-  onResponse = (exchange: Exchange, response: Response) => {
-    [
-      ...this._completedFlows.flatMap((f) => f.observers),
-      ...(this._activeFlow?.observers || []),
-    ].forEach((o) => o.onResponse(exchange, response));
-  };
 }

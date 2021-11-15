@@ -7,7 +7,7 @@ export default class CodePhishingObserver extends ThreatObserver {
     super('Authorization "code" Phishing');
   }
 
-  onAuthorizationResponse(exchange: Exchange, request: Request) {
+  onRedirectUriRequest(exchange: Exchange, request: Request) {
     const url = request.url;
 
     if (url.protocol === "https:") {
