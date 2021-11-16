@@ -108,7 +108,7 @@ const processResponse = (
     ? new Map(
         details.responseHeaders
           .filter((h) => h.value)
-          .map((h) => [h.name, h.value])
+          .map((h) => [h.name.toLowerCase(), h.value])
       )
     : new Map();
 

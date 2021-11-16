@@ -5,35 +5,24 @@ import { createUrl } from "../../../models/url";
 import ThreatObserver, { ThreatStatus } from "../../threat_observer";
 
 export default class TokenHistoryLeakObserver extends ThreatObserver {
-  private _authorizationResponseId?: string;
-
   constructor() {
     super("Access Token Leak in Browser History");
   }
 
-  onRedirectUriRequest(exchange: Exchange, request: Request) {
-    this._authorizationResponseId = exchange.id;
-  }
-
-  onResponse(exchange: Exchange, response: Response) {
-    if (
-      this._threat_status != ThreatStatus.Unknown ||
-      exchange.id !== this._authorizationResponseId
-    )
-      return;
+  onRedirectUriResponse(exchange: Exchange, response: Response) {
+    if (this._threat_status != ThreatStatus.Unknown) return;
 
     if (Math.floor(response.statusCode / 100) != 3) {
-      this._threat_status = ThreatStatus.PotentiallyVulnerable;
+      this._threat_status = ThreatStatus.Vulnerable;
       return;
     }
 
-    const location =
-      response.headers.get("Location") || response.headers.get("location");
+    const location = response.headers.get("location");
 
     const url = createUrl(location);
 
     if (!url.fragment) {
-      this._threat_status = ThreatStatus.PotentiallyVulnerable;
+      this._threat_status = ThreatStatus.Vulnerable;
       return;
     }
 

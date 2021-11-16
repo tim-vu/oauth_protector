@@ -12,7 +12,7 @@ export default class CodeHistoryLeakObserver extends ThreatObserver {
     if (this._threat_status != ThreatStatus.Unknown) return;
 
     if (Math.floor(response.statusCode / 100) != 3) {
-      this._threat_status = ThreatStatus.PotentiallyVulnerable;
+      this._threat_status = ThreatStatus.Vulnerable;
       return;
     }
 

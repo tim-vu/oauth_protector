@@ -28,6 +28,8 @@ export default abstract class ThreatObserver {
 
   onAuthorizationRequest(exchange: Exchange, request: Request) {}
 
+  onAuthorizationResponse(exchange: Exchange, response: Response) {}
+
   onRedirectUriRequest(exchange: Exchange, request: Request) {}
 
   onRedirectUriResponse(exchange: Exchange, response: Response) {}

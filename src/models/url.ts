@@ -1,5 +1,8 @@
-export const createUrl: (urlString: string) => URL = (urlString) => {
-  const url = new URL(urlString);
+export const createUrl: (urlString: string, base?: string) => URL = (
+  urlString,
+  base
+) => {
+  const url = new URL(urlString, base);
   const query = new Map(Array.from(url.searchParams.entries()));
 
   return {

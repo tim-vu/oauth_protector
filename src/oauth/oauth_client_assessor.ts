@@ -6,8 +6,12 @@ import OAuthFlow, { FlowType } from "./oauth_flow";
 import CsrfObserver from "./threat_observers/csrf_observer";
 import CodePhishingObserver from "./threat_observers/authorization_code/code_phising_observer";
 import CodeHistoryLeakObserver from "./threat_observers/authorization_code/code_history_leak_observer";
-import TokenHistoryLeakObserver from "./threat_observers/implicit/token_history_leak_observer";
+import TokenHistoryLeakObserver from "./threat_observers/implicit/token_leak_in_history";
 import CredentialLeakageViaReferrerClientObserver from "./threat_observers/authorization_code/credential_leakage_via_referrer_client";
+import { createUrl } from "../models/url";
+import { UserSessionImpersonationObserver } from "./threat_observers/authorization_code/user_session_impersonation";
+import { EavesDroppingAccessTokenLeakObserver } from "./threat_observers/authorization_code/eavesdropping_access_token";
+import { AccessTokenLeakInTransportObserver } from "./threat_observers/implicit/token_leak_in_transport";
 
 export class OAuthClientAssessor implements ExchangeListener {
   private _completedFlows: OAuthFlow[] = [];
@@ -28,7 +32,7 @@ export class OAuthClientAssessor implements ExchangeListener {
       if (isAuthRequest[0]) {
         const flow: OAuthFlow = {
           client: requestInitiator,
-          authorizationServer: request.url.hostname,
+          authorizationServer: request.url.origin,
           type: isAuthRequest[1],
           observers: OAuthClientAssessor._createObservers(isAuthRequest[1]),
         };
@@ -101,10 +105,19 @@ export class OAuthClientAssessor implements ExchangeListener {
     if (exchange.type == "main_frame") {
       const flow = this._activeFlow;
 
+      if (
+        OAuthClientAssessor._isAuthorizationResponse(flow, exchange, response)
+      ) {
+        flow.observers.forEach((o) =>
+          o.onAuthorizationResponse(exchange, response)
+        );
+      }
+
       if (exchange.id === flow?.redirectUriRequestId) {
         flow.observers.forEach((o) =>
           o.onRedirectUriResponse(exchange, response)
         );
+        return;
       }
     }
 
@@ -130,11 +143,17 @@ export class OAuthClientAssessor implements ExchangeListener {
         new CodePhishingObserver(),
         new CodeHistoryLeakObserver(),
         new CredentialLeakageViaReferrerClientObserver(),
+        new EavesDroppingAccessTokenLeakObserver(),
+        new UserSessionImpersonationObserver(),
       ];
     }
 
     if (flowType == FlowType.Implicit) {
-      return [new CsrfObserver(), new TokenHistoryLeakObserver()];
+      return [
+        new CsrfObserver(),
+        new TokenHistoryLeakObserver(),
+        new AccessTokenLeakInTransportObserver(),
+      ];
     }
   }
 
@@ -193,6 +212,54 @@ export class OAuthClientAssessor implements ExchangeListener {
     }
 
     return [true, OAuthClientAssessor.RESPONSE_TYPE_TO_FLOW_TYPE[responseType]];
+  };
+
+  private static _isAuthorizationResponse = (
+    flow: OAuthFlow,
+    exchange: Exchange,
+    response: Response
+  ): boolean => {
+    //The spec shows a redirect with status code 302
+
+    const isRedirect = Math.floor(response.statusCode / 100) == 3;
+
+    if (!flow || !isRedirect) return false;
+
+    const initiator =
+      exchange.requests[exchange.requests.length - 1].url.origin;
+
+    if (initiator != flow.authorizationServer) return false;
+
+    const location = createUrl(response.headers.get("location"), initiator);
+
+    const query = location.query;
+
+    if (query.has("code")) {
+      if (response.statusCode != 302) {
+        console.log(
+          "Authorization response detected with statuscode different from 302"
+        );
+        console.log(response);
+      }
+
+      return true;
+    }
+
+    const fragment = location.fragment;
+
+    if (
+      fragment.includes("access_token=") &&
+      fragment.includes("token_type=")
+    ) {
+      if (response.statusCode != 302) {
+        console.log(
+          "Authorization response detected with statuscode different from 302"
+        );
+        console.log(response);
+      }
+
+      return true;
+    }
   };
 
   private static _isRedirectUriRequest = (request: Request): boolean => {

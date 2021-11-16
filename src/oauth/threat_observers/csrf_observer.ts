@@ -42,19 +42,19 @@ export default class CsrfObserver extends ThreatObserver {
     const state = query.get(CsrfObserver.STATE_QUERY_PARAMETER);
 
     if (!state) {
-      this._threat_status = ThreatStatus.PotentiallyVulnerable;
+      this._threat_status = ThreatStatus.Vulnerable;
       this._message =
         CsrfObserver.STATE_PARAMETER_MISSING_FROM_AUTHORIZATION_RESPONSE_MESSAGE;
       return;
     }
 
     if (this._state !== state) {
-      this._threat_status = ThreatStatus.PotentiallyVulnerable;
+      this._threat_status = ThreatStatus.Vulnerable;
       this._message = CsrfObserver.STATE_PARAMTER_MISMATCH_MESSAGE;
       return;
     }
 
-    this._threat_status = ThreatStatus.Protected;
+    this._threat_status = ThreatStatus.PotentiallyProtected;
     this._message = `State parameter ${state} present in authorization request and response`;
   }
 }
