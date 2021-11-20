@@ -22,15 +22,15 @@ export default class CredentialLeakageViaReferrerClient extends ThreatObserver {
 
     if (!query.has("code_challenge")) return;
 
-    this._threat_status = ThreatStatus.Protected;
+    this.threatStatus = ThreatStatus.Protected;
   }
 
   onRedirectUriResponse(exchange: Exchange, response: Response) {
-    if (this._threat_status != ThreatStatus.Unknown) return;
+    if (this.threatStatus != ThreatStatus.Unknown) return;
 
     if (Math.floor(response.statusCode / 100) == 3) {
       //TODO: handle the case where the redirect includes the code/state parameter
-      this._threat_status = ThreatStatus.Protected;
+      this.threatStatus = ThreatStatus.Protected;
       return;
     }
 
@@ -41,10 +41,10 @@ export default class CredentialLeakageViaReferrerClient extends ThreatObserver {
         referrerPolicy
       )
     ) {
-      this._threat_status = ThreatStatus.Protected;
+      this.threatStatus = ThreatStatus.Protected;
       return;
     }
 
-    this._threat_status = ThreatStatus.PotentiallyVulnerable;
+    this.threatStatus = ThreatStatus.PotentiallyVulnerable;
   }
 }

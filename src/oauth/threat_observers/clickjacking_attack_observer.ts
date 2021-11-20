@@ -19,7 +19,7 @@ export class ClickJackingAttackObserver extends ThreatObserver {
 
   override onResponse(exchange: Exchange, response: Response) {
     if (
-      this._threat_status != ThreatStatus.Unknown ||
+      this.threatStatus != ThreatStatus.Unknown ||
       exchange.id != this.authorizationRequestId ||
       Math.floor(response.statusCode / 100) == 3
     )
@@ -34,10 +34,10 @@ export class ClickJackingAttackObserver extends ThreatObserver {
         directive?.toLowerCase()
       )
     ) {
-      this._threat_status = ThreatStatus.Vulnerable;
+      this.threatStatus = ThreatStatus.Vulnerable;
       return;
     }
 
-    this._threat_status = ThreatStatus.Protected;
+    this.threatStatus = ThreatStatus.Protected;
   }
 }

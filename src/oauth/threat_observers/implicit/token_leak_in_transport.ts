@@ -11,12 +11,12 @@ export class AccessTokenLeakInTransportObserver extends ThreatObserver {
     const url = exchange.requests[exchange.requests.length - 1].url;
 
     if (url.protocol === "https:") {
-      this._threat_status = ThreatStatus.Protected;
-      this._message = `The authorization response is using https`;
+      this.threatStatus = ThreatStatus.Protected;
+      this.message = `The authorization response is using https`;
       return;
     }
 
-    this._threat_status = ThreatStatus.Vulnerable;
-    this._message = `The authorization response is not using https`;
+    this.threatStatus = ThreatStatus.Vulnerable;
+    this.message = `The authorization response is not using https`;
   }
 }

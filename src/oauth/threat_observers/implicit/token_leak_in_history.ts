@@ -10,10 +10,10 @@ export default class TokenHistoryLeakObserver extends ThreatObserver {
   }
 
   onRedirectUriResponse(exchange: Exchange, response: Response) {
-    if (this._threat_status != ThreatStatus.Unknown) return;
+    if (this.threatStatus != ThreatStatus.Unknown) return;
 
     if (Math.floor(response.statusCode / 100) != 3) {
-      this._threat_status = ThreatStatus.Vulnerable;
+      this.threatStatus = ThreatStatus.Vulnerable;
       return;
     }
 
@@ -22,10 +22,10 @@ export default class TokenHistoryLeakObserver extends ThreatObserver {
     const url = createUrl(location);
 
     if (!url.fragment) {
-      this._threat_status = ThreatStatus.Vulnerable;
+      this.threatStatus = ThreatStatus.Vulnerable;
       return;
     }
 
-    this._threat_status = ThreatStatus.Protected;
+    this.threatStatus = ThreatStatus.Protected;
   }
 }

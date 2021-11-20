@@ -11,8 +11,17 @@ export enum ThreatStatus {
 }
 
 export default abstract class ThreatObserver {
-  protected _threat_status: ThreatStatus = ThreatStatus.Unknown;
-  protected _message: string;
+  protected set threatStatus(threatStatus: ThreatStatus) {
+    this._threatStatus = threatStatus;
+  }
+
+  private _threatStatus: ThreatStatus = ThreatStatus.Unknown;
+
+  protected set message(message: string) {
+    this._message = message;
+  }
+
+  private _message: string;
 
   public get threatName() {
     return this._threatName;
@@ -42,9 +51,9 @@ export default abstract class ThreatObserver {
     const result: string[] = [];
 
     result.push(`Threat: ${this.threatName}`);
-    result.push(`Status: ${ThreatStatus[this._threat_status]}`);
+    result.push(`Status: ${ThreatStatus[this._threatStatus]}`);
 
-    if (this._message) result.push(this._message);
+    if (this.message) result.push(this.message);
 
     return result.join("\r\n");
   }
