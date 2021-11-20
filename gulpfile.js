@@ -7,22 +7,37 @@ const uglify = require("gulp-uglify");
 const sourcemaps = require("gulp-sourcemaps");
 const buffer = require("vinyl-buffer");
 const gulpif = require("gulp-if");
+const babelify = require("babelify");
 
 const config = {
   sourceMaps: process.env.NODE_ENV !== "production",
-  background: "./src/background.ts",
-  intercept: "./src/intercept.ts",
-  backgroundOutputFilename: "background.js",
-  interceptOutputFilename: "intercept.js",
-  outDir: "build",
+  entries: {
+    background: {
+      entryPoint: "./src/background.ts",
+      outputFilename: "background.js",
+      paths: ["src/**/*.ts", "!src/injector.ts", "!src/interceptor.js"],
+      ts: true,
+    },
+    injector: {
+      entryPoint: "./src/injector.ts",
+      outputFilename: "injector.js",
+      paths: "src/injector.ts",
+      ts: true,
+    },
+    interceptor: {
+      entryPoint: "src/interceptor.js",
+      outputFilename: "interceptor.js",
+      paths: "src/interceptor.js",
+      ts: false,
+    },
+  },
+  out: "build",
   paths: {
     manifest: "src/manifest.json",
-    background: ["src/**/*.ts", "!src/intercept.ts"],
-    intercept: "src/intercept.ts",
   },
 };
 
-const createBrowserify = (entry, filename) => {
+const createTypescriptTask = (entry, output) => {
   return browserify({
     debug: config.sourceMaps,
     entries: [entry],
@@ -30,31 +45,58 @@ const createBrowserify = (entry, filename) => {
     .plugin(tsify)
     .bundle()
     .on("error", fancy_log)
-    .pipe(source(filename))
+    .pipe(source(output))
     .pipe(buffer())
     .pipe(gulpif(config.sourceMaps, sourcemaps.init({ loadMaps: true })))
     .pipe(uglify({ mangle: false, compress: false }))
     .pipe(gulpif(config.sourceMaps, sourcemaps.write()))
-    .pipe(gulp.dest(config.outDir));
+    .pipe(gulp.dest(config.out));
 };
 
-const background = () => {
-  return createBrowserify(config.background, config.backgroundOutputFilename);
+const createJavascriptTask = (entry, output) => {
+  return browserify({
+    debug: config.sourceMaps,
+    entries: [entry],
+  })
+    .transform(
+      babelify.configure({
+        presets: ["@babel/preset-env"],
+      })
+    )
+    .bundle()
+    .on("error", fancy_log)
+    .pipe(source(output))
+    .pipe(buffer())
+    .pipe(gulpif(config.sourceMaps, sourcemaps.init({ loadMaps: true })))
+    .pipe(uglify({ mangle: false, compress: false }))
+    .pipe(gulpif(config.sourceMaps, sourcemaps.write()))
+    .pipe(gulp.dest(config.out));
 };
 
-const intercept = () => {
-  return createBrowserify(config.intercept, config.interceptOutputFilename);
-};
+const compileTasksMap = Object.keys(config.entries).reduce((prev, key) => {
+  prev[key] = () => {
+    const entryPoint = config.entries[key].entryPoint;
+    const output = config.entries[key].outputFilename;
+    return config.entries[key].ts
+      ? createTypescriptTask(entryPoint, output)
+      : createJavascriptTask(entryPoint, output);
+  };
+  return prev;
+}, {});
+
+const compileTasks = Object.values(compileTasksMap);
 
 const manifest = () => {
-  return gulp.src(config.paths.manifest).pipe(gulp.dest(config.outDir));
+  return gulp.src(config.paths.manifest).pipe(gulp.dest(config.out));
 };
 
 const watch = () => {
   gulp.watch(config.paths.manifest, manifest);
-  gulp.watch(config.paths.background, background);
-  gulp.watch(config.paths.intercept, intercept);
+
+  for (const key in config.entries) {
+    gulp.watch(config.entries[key].paths, compileTasksMap[key]);
+  }
 };
 
-exports.build = gulp.parallel(manifest, background, intercept);
-exports.dev = gulp.parallel(manifest, background, intercept, watch);
+exports.build = gulp.parallel(manifest, ...compileTasks);
+exports.dev = gulp.parallel(manifest, ...compileTasks, watch);

@@ -12,6 +12,7 @@ import { createUrl } from "../models/url";
 import { UserSessionImpersonationObserver } from "./threat_observers/authorization_code/user_session_impersonation";
 import { EavesDroppingAccessTokenLeakObserver } from "./threat_observers/authorization_code/eavesdropping_access_token";
 import { AccessTokenLeakInTransportObserver } from "./threat_observers/implicit/token_leak_in_transport";
+import { ClickJackingAttackObserver } from "./threat_observers/clickjacking_attack_observer";
 
 export class OAuthClientAssessor implements ExchangeListener {
   private _completedFlows: OAuthFlow[] = [];
@@ -81,7 +82,8 @@ export class OAuthClientAssessor implements ExchangeListener {
 
     if (OAuthClientAssessor._isAccessTokenRequest(request)) {
       const flow =
-        this._activeFlow?.client == request.url.origin
+        this._activeFlow?.client ==
+        OAuthClientAssessor._getRequestInitiator(exchange, request)
           ? this._activeFlow
           : undefined;
 
@@ -140,6 +142,7 @@ export class OAuthClientAssessor implements ExchangeListener {
     if (flowType == FlowType.AuthorizationCode) {
       return [
         new CsrfObserver(),
+        new ClickJackingAttackObserver(),
         new CodePhishingObserver(),
         new CodeHistoryLeakObserver(),
         new CredentialLeakageViaReferrerClientObserver(),
@@ -151,6 +154,7 @@ export class OAuthClientAssessor implements ExchangeListener {
     if (flowType == FlowType.Implicit) {
       return [
         new CsrfObserver(),
+        new ClickJackingAttackObserver(),
         new TokenHistoryLeakObserver(),
         new AccessTokenLeakInTransportObserver(),
       ];
@@ -293,12 +297,10 @@ export class OAuthClientAssessor implements ExchangeListener {
   };
 
   onExchangeCompleted(exchange: Exchange) {
-    if (exchange.id !== this._activeFlow?.redirectUriRequestId) return;
+    const flow = this._activeFlow;
 
-    this._activeFlow?.observers.forEach((o) => console.log(o.getAssesment()));
-
-    //The flow is done as far as we are concerned
-    this._completedFlows.push(this._activeFlow);
-    this._activeFlow = null;
+    if (exchange.id === flow?.redirectUriRequestId) {
+      flow.observers.forEach((o) => console.log(o.getAssesment()));
+    }
   }
 }

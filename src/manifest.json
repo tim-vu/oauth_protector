@@ -9,10 +9,11 @@
   },
   "content_scripts": [
     {
-      "js": ["intercept.js"],
+      "js": ["injector.js"],
       "run_at": "document_start",
       "matches": ["<all_urls>"]
     }
   ],
-  "permissions": ["webRequest", "webRequestBlocking", "<all_urls>"]
+  "permissions": ["webRequest", "webRequestBlocking", "<all_urls>"],
+  "web_accessible_resources": ["interceptor.js"]
 }
