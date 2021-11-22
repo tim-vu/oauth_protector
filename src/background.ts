@@ -3,13 +3,14 @@ import Request from "./models/request";
 import Response from "./models/response";
 import { OAuthClientAssessor } from "./oauth/oauth_client_assessor";
 import { createUrl } from "./models/url";
+import NotificationInformer from "./ui/notification_informer";
 
 const ALL_REQUESTS_FILTER: chrome.webRequest.RequestFilter = {
   urls: ["<all_urls>"],
 };
 
 const partialExchanges = new Map<string, Exchange>();
-const exchangeListener = new OAuthClientAssessor();
+const exchangeListener = new OAuthClientAssessor(new NotificationInformer());
 
 chrome.webRequest.onBeforeRequest.addListener(
   (details) => {
@@ -60,7 +61,7 @@ chrome.webRequest.onBeforeRequest.addListener(
     });
   },
   ALL_REQUESTS_FILTER,
-  ["extraHeaders", "requestBody"]
+  ["extraHeaders", "requestBody", "blocking"]
 );
 
 chrome.webRequest.onBeforeSendHeaders.addListener(
@@ -94,7 +95,7 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
     exchangeListener.onRequest(newExchange, fullRequest);
   },
   ALL_REQUESTS_FILTER,
-  ["requestHeaders", "extraHeaders"]
+  ["requestHeaders", "extraHeaders", "blocking"]
 );
 
 const processResponse = (
@@ -131,7 +132,7 @@ const processResponse = (
 chrome.webRequest.onBeforeRedirect.addListener(
   processResponse,
   ALL_REQUESTS_FILTER,
-  ["responseHeaders"]
+  ["responseHeaders", "extraHeaders"]
 );
 chrome.webRequest.onResponseStarted.addListener(
   processResponse,

@@ -14,6 +14,7 @@ export default class TokenHistoryLeakObserver extends ThreatObserver {
 
     if (Math.floor(response.statusCode / 100) != 3) {
       this.threatStatus = ThreatStatus.Vulnerable;
+      this.message = "The redirect-uri did not respond with a redirect";
       return;
     }
 
@@ -23,6 +24,7 @@ export default class TokenHistoryLeakObserver extends ThreatObserver {
 
     if (!url.fragment) {
       this.threatStatus = ThreatStatus.Vulnerable;
+      this.message = "The redirect uri did not override the fragment";
       return;
     }
 

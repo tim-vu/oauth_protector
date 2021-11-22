@@ -14,6 +14,11 @@
       "matches": ["<all_urls>"]
     }
   ],
-  "permissions": ["webRequest", "webRequestBlocking", "<all_urls>"],
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>",
+    "notifications"
+  ],
   "web_accessible_resources": ["interceptor.js"]
 }

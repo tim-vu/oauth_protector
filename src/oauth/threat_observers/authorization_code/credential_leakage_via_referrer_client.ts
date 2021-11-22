@@ -46,5 +46,7 @@ export default class CredentialLeakageViaReferrerClient extends ThreatObserver {
     }
 
     this.threatStatus = ThreatStatus.PotentiallyVulnerable;
+    this.message =
+      "The redirect-uri does not properly set the Referrer-Policy header";
   }
 }

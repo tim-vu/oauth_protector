@@ -1,7 +1,7 @@
 import Exchange from "models/exchange";
 import Request from "models/request";
 import Response from "models/response";
-import ExchangeListener from "models/exchange_listener";
+import ExchangeListener from "interfaces/exchange_listener";
 import OAuthFlow, { FlowType } from "./oauth_flow";
 import CsrfObserver from "./threat_observers/csrf_observer";
 import CodePhishingObserver from "./threat_observers/authorization_code/code_phising_observer";
@@ -13,16 +13,22 @@ import { UserSessionImpersonationObserver } from "./threat_observers/authorizati
 import { EavesDroppingAccessTokenLeakObserver } from "./threat_observers/authorization_code/eavesdropping_access_token";
 import { AccessTokenLeakInTransportObserver } from "./threat_observers/implicit/token_leak_in_transport";
 import { ClickJackingAttackObserver } from "./threat_observers/clickjacking_attack_observer";
+import UserInformer from "interfaces/user_informer";
+import ThreatObserver, { ThreatStatus } from "./threat_observer";
 
 export class OAuthClientAssessor implements ExchangeListener {
   private _completedFlows: OAuthFlow[] = [];
   private _activeFlow?: OAuthFlow;
+
+  constructor(private readonly userInformer: UserInformer) {}
 
   onRequest = (exchange: Exchange, request: Request) => {
     const requestInitiator = OAuthClientAssessor._getRequestInitiator(
       exchange,
       request
     );
+
+    let sendRequest = true;
 
     if (exchange.type === "main_frame") {
       const isAuthRequest = OAuthClientAssessor._isAuthorizationRequest(
@@ -31,6 +37,8 @@ export class OAuthClientAssessor implements ExchangeListener {
       );
 
       if (isAuthRequest[0]) {
+        sendRequest = false;
+
         const flow: OAuthFlow = {
           client: requestInitiator,
           authorizationServer: request.url.origin,
@@ -46,11 +54,9 @@ export class OAuthClientAssessor implements ExchangeListener {
         flow.observers.forEach((o) =>
           o.onAuthorizationRequest(exchange, request)
         );
+      } else if (OAuthClientAssessor._isRedirectUriRequest(request)) {
+        sendRequest = false;
 
-        return;
-      }
-
-      if (OAuthClientAssessor._isRedirectUriRequest(request)) {
         const flow =
           this._activeFlow?.client == request.url.origin
             ? this._activeFlow
@@ -75,59 +81,114 @@ export class OAuthClientAssessor implements ExchangeListener {
           ...this._activeFlow,
           redirectUriRequestId: exchange.id,
         };
-
-        return;
       }
     }
 
-    if (OAuthClientAssessor._isAccessTokenRequest(request)) {
-      const flow =
-        this._activeFlow?.client ==
-        OAuthClientAssessor._getRequestInitiator(exchange, request)
-          ? this._activeFlow
-          : undefined;
+    if (exchange.type === "xmlhttprequest") {
+      if (OAuthClientAssessor._isAccessTokenRequest(request)) {
+        sendRequest = false;
 
-      if (!flow) {
-        console.log("Access token request without active flow?");
-        console.log("Initiator: " + request.url.origin);
-        console.log(request);
-        return;
+        const flow =
+          this._activeFlow?.client ==
+          OAuthClientAssessor._getRequestInitiator(exchange, request)
+            ? this._activeFlow
+            : undefined;
+
+        if (!flow) {
+          console.log("Access token request without active flow?");
+          console.log("Initiator: " + request.url.origin);
+          console.log(request);
+        } else {
+          flow.observers.forEach((o) => o.onTokenRequest(exchange, request));
+        }
       }
-
-      flow.observers.forEach((o) => o.onTokenRequest(exchange, request));
     }
 
-    [
-      ...this._completedFlows.flatMap((f) => f.observers),
-      ...(this._activeFlow?.observers || []),
-    ].forEach((o) => o.onRequest(exchange, request));
+    if (sendRequest) {
+      [
+        ...this._completedFlows.flatMap((f) => f.observers),
+        ...(this._activeFlow?.observers || []),
+      ].forEach((o) => o.onRequest(exchange, request));
+    }
+
+    if (!this._activeFlow) return;
+
+    this.updateObservers();
   };
 
   onResponse = (exchange: Exchange, response: Response) => {
+    let sendResponse = true;
+
     if (exchange.type == "main_frame") {
       const flow = this._activeFlow;
 
       if (
         OAuthClientAssessor._isAuthorizationResponse(flow, exchange, response)
       ) {
+        sendResponse = false;
+
+        console.log(`Authorization response detected. Client: ${flow.client}`);
+        console.log(response);
+
         flow.observers.forEach((o) =>
           o.onAuthorizationResponse(exchange, response)
         );
-      }
+      } else if (exchange.id === flow?.redirectUriRequestId) {
+        sendResponse = false;
 
-      if (exchange.id === flow?.redirectUriRequestId) {
+        console.log(`Redirect-uri response detected. Client: ${flow.client}`);
+        console.log(response);
+
         flow.observers.forEach((o) =>
           o.onRedirectUriResponse(exchange, response)
         );
-        return;
       }
     }
 
-    [
-      ...this._completedFlows.flatMap((f) => f.observers),
-      ...(this._activeFlow?.observers || []),
-    ].forEach((o) => o.onResponse(exchange, response));
+    if (!this._activeFlow) return;
+
+    if (sendResponse) {
+      [
+        ...this._completedFlows.flatMap((f) => f.observers),
+        ...(this._activeFlow?.observers || []),
+      ].forEach((o) => o.onResponse(exchange, response));
+    }
+
+    this.updateObservers();
   };
+
+  private updateObservers() {
+    const completedObservers = this._activeFlow.observers.filter(
+      (o) => o.threatStatus != ThreatStatus.Unknown
+    );
+
+    if (completedObservers.length > 0) this.informUsers(completedObservers);
+
+    this._activeFlow = {
+      ...this._activeFlow,
+      observers: this._activeFlow.observers.filter(
+        (o) => o.threatStatus == ThreatStatus.Unknown
+      ),
+    };
+  }
+
+  private informUsers(completedObservers: ThreatObserver[]) {
+    const toInform = completedObservers.filter(
+      (o) =>
+        o.threatStatus == ThreatStatus.Vulnerable ||
+        o.threatStatus == ThreatStatus.PotentiallyVulnerable
+    );
+
+    if (toInform.length == 0) {
+      return;
+    }
+
+    const message = toInform
+      .map((o) => "Threat: " + o.threatName + "\n" + o.message)
+      .join("\n");
+
+    this.userInformer.sendMessage("OAuth vulnerability detected", message);
+  }
 
   private static _getRequestInitiator(exchange: Exchange, request: Request) {
     if (exchange.requests.length === 1) return exchange.initiator;
@@ -167,30 +228,11 @@ export class OAuthClientAssessor implements ExchangeListener {
       token: FlowType.Implicit,
     };
 
-  private static readonly AUTHORIZATION_REQUEST_MATCHERS: Record<
-    string,
-    (request: Request) => [boolean, FlowType]
-  > = {
-    "www.facebook.com": (request: Request) => [
-      request.url.query.has("client_id") &&
-        request.url.query.has("redirect_uri"),
-      FlowType.AuthorizationCode,
-    ],
-  };
-
   private static _isAuthorizationRequest = (
     initiator: string,
     request: Request
   ): [boolean, FlowType?] => {
     if (request.method !== "GET") return [false, undefined];
-
-    const hostname = request.url.hostname;
-
-    if (hostname in OAuthClientAssessor.AUTHORIZATION_REQUEST_MATCHERS) {
-      return OAuthClientAssessor.AUTHORIZATION_REQUEST_MATCHERS[hostname](
-        request
-      );
-    }
 
     const hasParameters =
       request.url.query.has("client_id") &&
@@ -208,14 +250,27 @@ export class OAuthClientAssessor implements ExchangeListener {
       return [false, undefined];
     }
 
-    const responseType = request.url.query.get("response_type");
+    const responseTypes =
+      request.url.query.get("response_type")?.split(" ") || [];
 
-    if (!(responseType in OAuthClientAssessor.RESPONSE_TYPE_TO_FLOW_TYPE)) {
-      console.log("Unknown response_type encountered, ignoring request");
+    if (
+      responseTypes.filter((r) => r in this.RESPONSE_TYPE_TO_FLOW_TYPE)
+        .length == 0
+    ) {
+      console.log(
+        `Unknown response_type ${responseTypes} encountered, ignoring request`
+      );
       return [false, undefined];
     }
 
-    return [true, OAuthClientAssessor.RESPONSE_TYPE_TO_FLOW_TYPE[responseType]];
+    return [
+      true,
+      OAuthClientAssessor.RESPONSE_TYPE_TO_FLOW_TYPE[
+        responseTypes.find(
+          (r) => r in OAuthClientAssessor.RESPONSE_TYPE_TO_FLOW_TYPE
+        )
+      ],
+    ];
   };
 
   private static _isAuthorizationResponse = (

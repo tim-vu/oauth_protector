@@ -12,11 +12,10 @@ export class UserSessionImpersonationObserver extends ThreatObserver {
 
     if (url.protocol === "https:") {
       this.threatStatus = ThreatStatus.Protected;
-      this.message = `The redirect_uri ${url.href} is using https`;
       return;
     }
 
     this.threatStatus = ThreatStatus.Vulnerable;
-    this.message = `The redirect_uri ${url.href} is not using https`;
+    this.message = `The redirect_uri is not using https`;
   }
 }

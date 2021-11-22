@@ -35,6 +35,8 @@ export class ClickJackingAttackObserver extends ThreatObserver {
       )
     ) {
       this.threatStatus = ThreatStatus.Vulnerable;
+      this.message =
+        "The authorization page response does not correctly set the X-Frame-Options header";
       return;
     }
 

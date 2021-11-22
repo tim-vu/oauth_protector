@@ -12,7 +12,6 @@ export default class CodePhishingObserver extends ThreatObserver {
 
     if (url.protocol === "https:") {
       this.threatStatus = ThreatStatus.Protected;
-      this.message = `The redirect_uri ${url.href} is using https`;
       return;
     }
 

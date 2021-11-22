@@ -3,11 +3,11 @@ import Request from "../../models/request";
 import ThreatObserver, { ThreatStatus } from "../threat_observer";
 
 export default class CsrfObserver extends ThreatObserver {
-  private static readonly STATE_PARAMETER_MISSING_FROM_AUTHORIZATION_REQUESTmessage =
-    "The authorization request does not contain the state paramester";
-  private static readonly STATE_PARAMETER_MISSING_FROM_AUTHORIZATION_RESPONSEmessage =
+  private static readonly STATE_PARAMETER_MISSING_FROM_AUTHORIZATION_REQUEST =
+    "The authorization request does not contain the state parameter";
+  private static readonly STATE_PARAMETER_MISSING_FROM_AUTHORIZATION_RESPONSE =
     "The authorization response does not contain the state paramater";
-  private static readonly STATE_PARAMTER_MISMATCHmessage =
+  private static readonly STATE_PARAMTER_MISMATCH =
     "This state parameter in the authorization response does not match the state parameter in the authorization request";
 
   static readonly STATE_QUERY_PARAMETER = "state";
@@ -25,7 +25,7 @@ export default class CsrfObserver extends ThreatObserver {
     if (!query.has(CsrfObserver.STATE_QUERY_PARAMETER)) {
       this.threatStatus = ThreatStatus.PotentiallyVulnerable;
       this.message =
-        CsrfObserver.STATE_PARAMETER_MISSING_FROM_AUTHORIZATION_REQUESTmessage;
+        CsrfObserver.STATE_PARAMETER_MISSING_FROM_AUTHORIZATION_REQUEST;
       return;
     }
 
@@ -44,17 +44,16 @@ export default class CsrfObserver extends ThreatObserver {
     if (!state) {
       this.threatStatus = ThreatStatus.Vulnerable;
       this.message =
-        CsrfObserver.STATE_PARAMETER_MISSING_FROM_AUTHORIZATION_RESPONSEmessage;
+        CsrfObserver.STATE_PARAMETER_MISSING_FROM_AUTHORIZATION_RESPONSE;
       return;
     }
 
     if (this._state !== state) {
       this.threatStatus = ThreatStatus.Vulnerable;
-      this.message = CsrfObserver.STATE_PARAMTER_MISMATCHmessage;
+      this.message = CsrfObserver.STATE_PARAMTER_MISMATCH;
       return;
     }
 
     this.threatStatus = ThreatStatus.PotentiallyProtected;
-    this.message = `State parameter ${state} present in authorization request and response`;
   }
 }

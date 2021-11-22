@@ -1,6 +1,6 @@
-import Exchange from "./exchange";
-import Request from "./request";
-import Response from "./response";
+import Exchange from "models/exchange";
+import Request from "models/request";
+import Response from "models/response";
 
 export default interface ExchangeListener {
   onRequest: (exchange: Exchange, request: Request) => void;

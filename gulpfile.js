@@ -32,9 +32,7 @@ const config = {
     },
   },
   out: "build",
-  paths: {
-    manifest: "src/manifest.json",
-  },
+  paths: ["src/manifest.json", "src/img/*"],
 };
 
 const createTypescriptTask = (entry, output) => {
@@ -86,17 +84,17 @@ const compileTasksMap = Object.keys(config.entries).reduce((prev, key) => {
 
 const compileTasks = Object.values(compileTasksMap);
 
-const manifest = () => {
-  return gulp.src(config.paths.manifest).pipe(gulp.dest(config.out));
+const assets = () => {
+  return gulp.src(config.paths, { base: "src" }).pipe(gulp.dest(config.out));
 };
 
 const watch = () => {
-  gulp.watch(config.paths.manifest, manifest);
+  gulp.watch(config.paths, assets);
 
   for (const key in config.entries) {
     gulp.watch(config.entries[key].paths, compileTasksMap[key]);
   }
 };
 
-exports.build = gulp.parallel(manifest, ...compileTasks);
-exports.dev = gulp.parallel(manifest, ...compileTasks, watch);
+exports.build = gulp.parallel(assets, ...compileTasks);
+exports.dev = gulp.parallel(assets, ...compileTasks, watch);

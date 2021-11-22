@@ -11,11 +11,19 @@ export enum ThreatStatus {
 }
 
 export default abstract class ThreatObserver {
+  public get threatStatus() {
+    return this._threatStatus;
+  }
+
   protected set threatStatus(threatStatus: ThreatStatus) {
     this._threatStatus = threatStatus;
   }
 
   private _threatStatus: ThreatStatus = ThreatStatus.Unknown;
+
+  public get message() {
+    return this._message;
+  }
 
   protected set message(message: string) {
     this._message = message;

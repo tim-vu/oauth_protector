@@ -12,11 +12,10 @@ export class EavesDroppingAccessTokenLeakObserver extends ThreatObserver {
 
     if (url.protocol === "https:") {
       this.threatStatus = ThreatStatus.Protected;
-      this.message = `The token endpoint ${url.href} is using https`;
       return;
     }
 
     this.threatStatus = ThreatStatus.Vulnerable;
-    this.message = `The token endpoint ${url.href} is not using https`;
+    this.message = `The token endpoint is not using https`;
   }
 }

@@ -1,6 +1,7 @@
 import Exchange from "models/exchange";
 import Request from "models/request";
 import Response from "models/response";
+import { createUrl } from "../../../models/url";
 import ThreatObserver, { ThreatStatus } from "../../threat_observer";
 
 export default class CodeHistoryLeakObserver extends ThreatObserver {
@@ -13,9 +14,15 @@ export default class CodeHistoryLeakObserver extends ThreatObserver {
 
     if (Math.floor(response.statusCode / 100) != 3) {
       this.threatStatus = ThreatStatus.Vulnerable;
+      this.message = "The redirect-uri did not respond with a redirect";
       return;
     }
 
-    this.threatStatus = ThreatStatus.Protected;
+    const location = createUrl(response.headers.get("location"));
+
+    if (!location.query.has("code")) {
+      this.threatStatus = ThreatStatus.Protected;
+      return;
+    }
   }
 }

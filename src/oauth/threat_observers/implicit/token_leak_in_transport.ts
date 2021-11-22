@@ -12,7 +12,6 @@ export class AccessTokenLeakInTransportObserver extends ThreatObserver {
 
     if (url.protocol === "https:") {
       this.threatStatus = ThreatStatus.Protected;
-      this.message = `The authorization response is using https`;
       return;
     }
 
