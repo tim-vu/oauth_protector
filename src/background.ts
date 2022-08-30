@@ -1,7 +1,7 @@
 import Exchange from "./models/exchange";
 import Request from "./models/request";
 import Response from "./models/response";
-import { OAuthClientAssessor } from "./oauth/oauth_client_assessor";
+import { OAuthClientAssessor } from "./oauth/passive/oauth_client_assessor";
 import { createUrl } from "./models/url";
 import NotificationInformer from "./ui/notification_informer";
 
@@ -152,7 +152,3 @@ chrome.webRequest.onCompleted.addListener((details) => {
   exchangeListener.onExchangeCompleted(exchange);
   partialExchanges.delete(exchange.id);
 }, ALL_REQUESTS_FILTER);
-
-chrome.runtime.onMessage.addListener(function (request, sender) {
-  console.log(request);
-});

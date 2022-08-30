@@ -1,4 +1,4 @@
-import ThreatObserver from "./threat_observer";
+import ThreatObserver from "./passive/threat_observer";
 
 export enum FlowType {
   Implicit,
@@ -7,8 +7,12 @@ export enum FlowType {
 
 export default interface OAuthFlow {
   client: string;
-  authorizationServer: string;
+  clientId: string;
+  state?: string;
+  nonce?: string;
+  redirectUri: string;
+  authorizationServer: Set<string>;
   type: FlowType;
-  observers: ThreatObserver[];
+  observers?: ThreatObserver[];
   redirectUriRequestId?: string;
 }

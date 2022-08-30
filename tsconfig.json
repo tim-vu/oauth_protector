@@ -1,8 +1,11 @@
 {
   "compilerOptions": {
     "noImplicitAny": true,
-    "target": "es2021",
     "lib": ["DOM", "DOM.Iterable", "ES2021"],
-    "baseUrl": "src"
+    "baseUrl": "src",
+    "module": "commonjs",
+    "allowJs": true,
+    "target": "es6",
+    "sourceMap": true
   }
 }

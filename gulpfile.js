@@ -39,8 +39,14 @@ const createTypescriptTask = (entry, output) => {
   return browserify({
     debug: config.sourceMaps,
     entries: [entry],
+    basedir: ".",
   })
-    .plugin(tsify)
+    .plugin(tsify, { global: true })
+    .transform(
+      babelify.configure({
+        presets: ["@babel/preset-env"],
+      })
+    )
     .bundle()
     .on("error", fancy_log)
     .pipe(source(output))

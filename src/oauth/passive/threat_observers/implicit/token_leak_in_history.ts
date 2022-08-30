@@ -1,12 +1,12 @@
 import Exchange from "models/exchange";
 import Request from "models/request";
 import Response from "models/response";
-import { createUrl } from "../../../models/url";
+import { createUrl } from "../../../../models/url";
 import ThreatObserver, { ThreatStatus } from "../../threat_observer";
 
-export default class CodeHistoryLeakObserver extends ThreatObserver {
+export default class TokenHistoryLeakObserver extends ThreatObserver {
   constructor() {
-    super('Leaking Authorization "codes" in the browser history');
+    super("Access Token Leak in Browser History");
   }
 
   onRedirectUriResponse(exchange: Exchange, response: Response) {
@@ -18,11 +18,16 @@ export default class CodeHistoryLeakObserver extends ThreatObserver {
       return;
     }
 
-    const location = createUrl(response.headers.get("location"));
+    const location = response.headers.get("location");
 
-    if (!location.query.has("code")) {
-      this.threatStatus = ThreatStatus.Protected;
+    const url = createUrl(location);
+
+    if (!url.fragment) {
+      this.threatStatus = ThreatStatus.Vulnerable;
+      this.message = "The redirect uri did not override the fragment";
       return;
     }
+
+    this.threatStatus = ThreatStatus.Protected;
   }
 }

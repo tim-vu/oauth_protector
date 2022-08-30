@@ -25,4 +25,4 @@ const run = () => {
   (document.head || document.documentElement).appendChild(element);
 };
 
-run();
+//run();

@@ -41,8 +41,6 @@ export default abstract class ThreatObserver {
     this._threatName = threatName;
   }
 
-  onRequest(exchange: Exchange, request: Request) {}
-
   onAuthorizationRequest(exchange: Exchange, request: Request) {}
 
   onAuthorizationResponse(exchange: Exchange, response: Response) {}

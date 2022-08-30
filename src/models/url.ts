@@ -1,7 +1,4 @@
-export const createUrl: (urlString: string, base?: string) => URL = (
-  urlString,
-  base
-) => {
+export function createUrl(urlString: string, base?: string): URL {
   const url = new URL(urlString, base);
   const query = new Map(Array.from(url.searchParams.entries()));
 
@@ -15,7 +12,7 @@ export const createUrl: (urlString: string, base?: string) => URL = (
     href: url.href,
     origin: url.origin,
   };
-};
+}
 
 export default interface URL {
   protocol: string;
